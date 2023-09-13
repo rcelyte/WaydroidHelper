@@ -1,0 +1,8 @@
+/.obj
+/extern
+/extern.cmake
+/libWaydroidHelper.so
+/makefile.user
+/qpm.shared.json
+/qpm_defines.cmake
+/WaydroidHelper.qmod

@@ -1,0 +1,23 @@
+{
+	"sharedDir": ".obj",
+	"dependenciesDir": "extern",
+	"info": {
+		"name": "Waydroid Helper Redux",
+		"id": "WaydroidHelper31",
+		"version": "1.0.0",
+		"url": null,
+		"additionalData": {}
+	},
+	"dependencies": [
+		{
+			"id": "modloader",
+			"versionRange": "^1.2.3",
+			"additionalData": {}
+		}, {
+			"id": "libil2cpp",
+			"versionRange": ">=0.3.0<0.4.0",
+			"additionalData": {}
+		}
+	],
+	"additionalData": {}
+}
