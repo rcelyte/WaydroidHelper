@@ -2,20 +2,27 @@
 	"sharedDir": ".obj",
 	"dependenciesDir": "extern",
 	"info": {
-		"name": "Waydroid Helper Redux",
-		"id": "WaydroidHelper31",
-		"version": "1.0.0",
+		"name": "Waydroid Helper (scotland2 test)",
+		"id": "WaydroidHelper",
+		"version": "1.0.0-sl2test",
 		"url": null,
 		"additionalData": {}
 	},
 	"dependencies": [
 		{
-			"id": "modloader",
-			"versionRange": "^1.2.3",
+			"id": "flamingo",
+			"versionRange": "^0.1.2",
+			"additionalData": {
+				"extraFiles": ["src/And64InlineHook.cpp"],
+				"headersOnly": true
+			}
+		},{
+			"id": "scotland2",
+			"versionRange": "^0.1.2",
 			"additionalData": {}
 		}, {
 			"id": "libil2cpp",
-			"versionRange": ">=0.3.0<0.4.0",
+			"versionRange": ">=0.3.1<0.4.0",
 			"additionalData": {}
 		}
 	],
