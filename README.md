@@ -1,3 +1,3 @@
 WaydroidHelper
 ==============
-This mod enables Beat Saber to run on non-Quest Android devices with OpenXR support. In the future, there will likely be added Waydroid specific patches to improve x86 performance and whatnot.
+This mod switches Quest Beat Saber's XR backend from OVRPlugin to OpenXR and activates the same input bindings present in PC Beat Saber.
