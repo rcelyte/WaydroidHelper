@@ -18,24 +18,25 @@ ndk:
 	$(error Android NDK path not set)
 endif
 
-CFLAGS := -std=c2x -fPIC -fvisibility=hidden -DVERSION=\"$(VERSION)\" -isystem extern/includes -isystem src/include \
-	-isystem extern/includes/libil2cpp/il2cpp/libil2cpp -Wall -Wextra -Werror -pedantic-errors
-CXXFLAGS := -std=c++20 -fPIC -fvisibility=hidden -fdeclspec -DVERSION=\"$(VERSION)\" -isystem extern/includes/flamingo/shared
-LDFLAGS = -static-libstdc++ -shared -Wl,--no-undefined,--gc-sections,--fatal-warnings -Lextern/libs -L.obj -lil2cpp -lsl2 -llog
+CFLAGS := -std=c2x -fPIC -fvisibility=hidden -DVERSION=\"$(VERSION)\" -Wall -Wextra -Werror -pedantic-errors -Wno-error=unused-function
+CXXFLAGS := -std=c++20 -fPIC -fvisibility=hidden -fdeclspec -DVERSION=\"$(VERSION)\" -isystem extern/includes \
+	-isystem extern/includes/bs-cordl/include -isystem extern/includes/libil2cpp/il2cpp/libil2cpp -isystem extern/includes/fmt/fmt/include \
+	-DUNITY_2021 -DHAS_CODEGEN -DFMT_HEADER_ONLY
+LDFLAGS = -static-libstdc++ -shared -Wl,--no-undefined,--gc-sections,--fatal-warnings -Lextern/libs -L.obj -Lextern/libs \
+	-l:$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so)) -lpaperlog -lsl2 -llog
 
-CFILES := $(wildcard src/*.c) extern/includes/flamingo/src/And64InlineHook.cpp
+CXXFILES := $(wildcard src/*.c src/*.cpp) extern/includes/beatsaber-hook/src/inline-hook/And64InlineHook.cpp
 
 all: WaydroidHelper.qmod
 
-WaydroidHelper.qmod: cover.png $(wildcard overrides/*.so) libWaydroidHelper.so .obj/WaydroidHelper.qmod/mod.json
+WaydroidHelper.qmod: cover.png $(wildcard overrides/arm64-v8a/*.so) libWaydroidHelper.so .obj/WaydroidHelper.qmod/mod.json
 	@echo "[zip $@]"
-	zip -j "$@" $^
+	zip -j "$@" $^ extern/libs/libbeatsaber-hook*.so
 
-libWaydroidHelper.so: $(CFILES:%=$(OBJDIR)/%.o) .obj/libil2cpp.so | ndk
+libWaydroidHelper.so: $(CXXFILES:%=$(OBJDIR)/%.o) | ndk
 	@echo "[cxx $@]"
-	$(CXX) $(LDFLAGS) $(CFILES:%=$(OBJDIR)/%.o) -o "$@"
+	$(CXX) $(LDFLAGS) $(CXXFILES:%=$(OBJDIR)/%.o) -o "$@"
 
-$(OBJDIR)/src/%.c.o: CFLAGS += 
 $(OBJDIR)/%.c.o: %.c extern makefile | ndk
 	@echo "[cc $(notdir $@)]"
 	@mkdir -p "$(@D)"
@@ -58,18 +59,19 @@ $(OBJDIR)/%.cpp.o: %.cpp extern makefile | ndk
 		\"author\": \"rcelyte\",\n\
 		\"version\": \"$(VERSION)\",\n\
 		\"packageId\": \"com.beatgames.beatsaber\",\n\
-		\"packageVersion\": \"1.31.0_5257753291\",\n\
+		\"packageVersion\": \"1.35.0_8016709773\",\n\
 		\"description\": \"Questless any%%\",\n\
 		\"coverImage\": \"cover.png\",\n\
-		\"dependencies\": [],\n\
+		\"dependencies\": [\n\
+			{\n\
+				\"version\": \"^3.6.1\",\n\
+				\"id\": \"paper\",\n\
+				\"downloadIfMissing\": \"https://github.com/Fernthedev/paperlog/releases/download/v3.6.3/paperlog.qmod\"\n\
+			}\n\
+		],\n\
 		\"modFiles\": [\"libWaydroidHelper.so\"],\n\
-		\"libraryFiles\": [\"libopenxr_loader.so\", \"libUnityOpenXR.so\"]\n\
+		\"libraryFiles\": [\"$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so))\", \"libopenxr_loader.so\", \"libUnityOpenXR.so\"]\n\
 	}" > $@
-
-.obj/libil2cpp.so: extern makefile
-	@echo "[cc $(notdir $@)]"
-	printf "char il2cpp_defaults[1];\n" | $(CC) -xc -std=c11 - extern/includes/libil2cpp/il2cpp/libil2cpp/il2cpp-api-functions.h -o $@ \
-		-D'DO_API(result_, name_, params_)=char name_[1];' -fPIC -fvisibility=default -nodefaultlibs -nostartfiles -shared
 
 extern: qpm.json
 	@echo "[qpm restore]"
@@ -83,4 +85,4 @@ clean:
 
 .PHONY: clean ndk all
 
-sinclude $(CFILES:%=$(OBJDIR)/%.d)
+sinclude $(CXXFILES:%=$(OBJDIR)/%.d)
