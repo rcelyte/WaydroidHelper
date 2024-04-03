@@ -18,18 +18,19 @@ ndk:
 	$(error Android NDK path not set)
 endif
 
-CFLAGS := -std=c2x -fPIC -fvisibility=hidden -DVERSION=\"$(VERSION)\" -Wall -Wextra -Werror -pedantic-errors -Wno-error=unused-function
-CXXFLAGS := -std=c++20 -fPIC -fvisibility=hidden -fdeclspec -DVERSION=\"$(VERSION)\" -isystem extern/includes \
+CFLAGS := -std=c2x -fPIC -fvisibility=hidden -DVERSION=\"$(VERSION)\" -Weverything \
+	-Wno-declaration-after-statement -Wno-unsafe-buffer-usage -Werror -pedantic-errors
+CXXFLAGS := -std=c++20 -fPIC -fvisibility=hidden -fdeclspec -DVERSION=\"$(VERSION)\" -isystem .obj/include -isystem extern/includes \
 	-isystem extern/includes/bs-cordl/include -isystem extern/includes/libil2cpp/il2cpp/libil2cpp -isystem extern/includes/fmt/fmt/include \
-	-DUNITY_2021 -DHAS_CODEGEN -DFMT_HEADER_ONLY
-LDFLAGS = -static-libstdc++ -shared -Wl,--no-undefined,--gc-sections,--fatal-warnings -Lextern/libs -L.obj -Lextern/libs \
-	-l:$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so)) -lpaperlog -lsl2 -llog
+	-DUNITY_2021 -DHAS_CODEGEN -DFMT_HEADER_ONLY -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Werror -pedantic-errors
+LDFLAGS = -static-libstdc++ -shared -Wl,--no-undefined,--gc-sections,--fatal-warnings -Lextern/libs -Lextern/libs -Lthirdparty/arm64-v8a \
+	-l:$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so)) -lpaperlog -lsl2 -llog -l:libUnityOpenXR.so
 
-CXXFILES := $(wildcard src/*.c src/*.cpp) extern/includes/beatsaber-hook/src/inline-hook/And64InlineHook.cpp
+CXXFILES := $(wildcard src/*.c src/*.cpp src/*/*.cpp) extern/includes/beatsaber-hook/src/inline-hook/And64InlineHook.cpp
 
 all: WaydroidHelper.qmod
 
-WaydroidHelper.qmod: cover.png $(wildcard overrides/arm64-v8a/*.so) libWaydroidHelper.so .obj/WaydroidHelper.qmod/mod.json
+WaydroidHelper.qmod: cover.png $(wildcard thirdparty/arm64-v8a/*.so) thirdparty/UnitySubsystemsManifest.json libWaydroidHelper.so .obj/WaydroidHelper.qmod/mod.json
 	@echo "[zip $@]"
 	zip -j "$@" $^ extern/libs/libbeatsaber-hook*.so
 
@@ -42,12 +43,13 @@ $(OBJDIR)/%.c.o: %.c extern makefile | ndk
 	@mkdir -p "$(@D)"
 	$(CC) $(CFLAGS) -c "$<" -o "$@" -MMD -MP
 
+$(OBJDIR)/extern/includes/beatsaber-hook/src/inline-hook/And64InlineHook.cpp.o: CXXFLAGS += -w
 $(OBJDIR)/%.cpp.o: %.cpp extern makefile | ndk
 	@echo "[cxx $(notdir $@)]"
 	@mkdir -p "$(@D)"
 	$(CXX) $(CXXFLAGS) -c "$<" -o "$@" -MMD -MP
 
-.obj/WaydroidHelper.qmod/mod.json: extern
+.obj/WaydroidHelper.qmod/mod.json: extern makefile
 	@echo "[printf $(notdir $@)]"
 	@mkdir -p "$(@D)"
 	printf "{\n\
@@ -70,7 +72,8 @@ $(OBJDIR)/%.cpp.o: %.cpp extern makefile | ndk
 			}\n\
 		],\n\
 		\"modFiles\": [\"libWaydroidHelper.so\"],\n\
-		\"libraryFiles\": [\"$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so))\", \"libopenxr_loader.so\", \"libUnityOpenXR.so\"]\n\
+		\"libraryFiles\": [\"$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so))\", \"libopenxr_loader.so\", \"libUnityOpenXR.so\"],\n\
+		\"fileCopies\": [{\"name\": \"UnitySubsystemsManifest.json\", \"destination\": \"/sdcard/ModData/com.beatgames.beatsaber/Mods/WaydroidHelper/UnityOpenXR/UnitySubsystemsManifest.json\"}]\n\
 	}" > $@
 
 extern: qpm.json
