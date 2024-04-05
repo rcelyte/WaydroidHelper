@@ -23,14 +23,14 @@ CFLAGS := -std=c2x -fPIC -fvisibility=hidden -DVERSION=\"$(VERSION)\" -Weverythi
 CXXFLAGS := -std=c++20 -fPIC -fvisibility=hidden -fdeclspec -DVERSION=\"$(VERSION)\" -isystem .obj/include -isystem extern/includes \
 	-isystem extern/includes/bs-cordl/include -isystem extern/includes/libil2cpp/il2cpp/libil2cpp -isystem extern/includes/fmt/fmt/include \
 	-DUNITY_2021 -DHAS_CODEGEN -DFMT_HEADER_ONLY -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Werror -pedantic-errors
-LDFLAGS = -static-libstdc++ -shared -Wl,--no-undefined,--gc-sections,--fatal-warnings -Lextern/libs -Lextern/libs -Lthirdparty/arm64-v8a \
+LDFLAGS = -static-libstdc++ -shared -Wl,--no-undefined,--gc-sections,--fatal-warnings -Lextern/libs -Lextern/libs -Lthirdparty \
 	-l:$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so)) -lpaperlog -lsl2 -llog -l:libUnityOpenXR.so
 
 CXXFILES := $(wildcard src/*.c src/*.cpp src/*/*.cpp) extern/includes/beatsaber-hook/src/inline-hook/And64InlineHook.cpp
 
 all: WaydroidHelper.qmod
 
-WaydroidHelper.qmod: cover.png $(wildcard thirdparty/arm64-v8a/*.so) thirdparty/UnitySubsystemsManifest.json libWaydroidHelper.so .obj/WaydroidHelper.qmod/mod.json
+WaydroidHelper.qmod: cover.png thirdparty/libUnityOpenXR.so thirdparty/libopenxr_loader.so thirdparty/UnitySubsystemsManifest.json libWaydroidHelper.so .obj/WaydroidHelper.qmod/mod.json
 	@echo "[zip $@]"
 	zip -j "$@" $^ extern/libs/libbeatsaber-hook*.so
 
@@ -75,6 +75,18 @@ $(OBJDIR)/%.cpp.o: %.cpp extern makefile | ndk
 		\"libraryFiles\": [\"$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so))\", \"libopenxr_loader.so\", \"libUnityOpenXR.so\"],\n\
 		\"fileCopies\": [{\"name\": \"UnitySubsystemsManifest.json\", \"destination\": \"/sdcard/ModData/com.beatgames.beatsaber/Mods/WaydroidHelper/UnityOpenXR/UnitySubsystemsManifest.json\"}]\n\
 	}" > $@
+
+thirdparty/libopenxr_loader.so:
+	@echo "[curl $(notdir $@)]"
+	@mkdir -p .obj/
+	curl https://github.com/KhronosGroup/OpenXR-SDK-Source/releases/download/release-1.0.29/openxr_loader_for_android-1.0.29.aar -Lo .obj/openxr_loader.aar
+	echo "b50bb0d22c6d5fd2f8a7cef4a1d7bb9632c26b1b45c7e82c6aa01f1fc89be6b5 .obj/openxr_loader.aar" | \
+		sha256sum -c || (rm .obj/openxr_loader.aar; false)
+	unzip -ojd $(@D) .obj/openxr_loader.aar prefab/modules/openxr_loader/libs/android.arm64-v8a/libopenxr_loader.so
+	rm .obj/openxr_loader.aar
+	touch $@
+
+extern/includes/beatsaber-hook/src/inline-hook/And64InlineHook.cpp: extern
 
 extern: qpm.json
 	@echo "[qpm restore]"

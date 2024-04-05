@@ -129,6 +129,21 @@ enum RenderMode {
 	RenderMode_MultiPass, // Submit separate draw calls for each eye.
 	RenderMode_SinglePassInstanced, // Submit one draw call for both eyes.
 };
+typedef uint32_t InputDeviceCharacteristics;
+enum : InputDeviceCharacteristics {
+	InputDeviceCharacteristics_None = 0u,
+	InputDeviceCharacteristics_HeadMounted = 1u,
+	InputDeviceCharacteristics_Camera = 2u,
+	InputDeviceCharacteristics_HeldInHand = 4u,
+	InputDeviceCharacteristics_HandTracking = 8u,
+	InputDeviceCharacteristics_EyeTracking = 0x10u,
+	InputDeviceCharacteristics_TrackedDevice = 0x20u,
+	InputDeviceCharacteristics_Controller = 0x40u,
+	InputDeviceCharacteristics_TrackingReference = 0x80u,
+	InputDeviceCharacteristics_Left = 0x100u,
+	InputDeviceCharacteristics_Right = 0x200u,
+	InputDeviceCharacteristics_Simulated6DOF = 0x400u,
+};
 struct SerializedGuid {
 	uint64_t data[2];
 };
@@ -177,12 +192,12 @@ void NativeConfig_SetProcAddressPtrAndLoadStage1(int32_t (*func)(struct XrInstan
 void NativeConfig_SetRenderMode(enum RenderMode renderMode);
 void NativeConfig_SetSymmetricProjection(bool enabled);
 bool OpenXRInputProvider_AttachActionSets();
-uint64_t OpenXRInputProvider_CreateAction(uint64_t actionSetId, const STRING_MARSHAL_TYPE name[], const STRING_MARSHAL_TYPE localizedName[], uint32_t actionType, struct SerializedGuid guid, const STRING_MARSHAL_TYPE userPaths[/*ARRAY TYPE*/], uint32_t userPathCount, bool isAdditive, const STRING_MARSHAL_TYPE usages[/*ARRAY TYPE*/], uint32_t usageCount);
+uint64_t OpenXRInputProvider_CreateAction(uint64_t actionSetId, const STRING_MARSHAL_TYPE name[], const STRING_MARSHAL_TYPE localizedName[], uint32_t actionType, struct SerializedGuid guid, const STRING_MARSHAL_TYPE *const userPaths[/*ARRAY TYPE*/], uint32_t userPathCount, bool isAdditive, const STRING_MARSHAL_TYPE *const usages[/*ARRAY TYPE*/], uint32_t usageCount);
 uint64_t OpenXRInputProvider_CreateActionSet(const STRING_MARSHAL_TYPE name[], const STRING_MARSHAL_TYPE localizedName[], struct SerializedGuid guid);
 uint64_t OpenXRInputProvider_GetActionIdByControl(uint32_t deviceId, const STRING_MARSHAL_TYPE name[]);
 bool OpenXRInputProvider_GetActionIsActive(uint32_t deviceId, const STRING_MARSHAL_TYPE name[]);
 bool OpenXRInputProvider_GetAppSpace(uint64_t *appSpace);
-uint64_t OpenXRInputProvider_RegisterDeviceDefinition(const STRING_MARSHAL_TYPE userPath[], const STRING_MARSHAL_TYPE interactionProfile[], bool isAdditive, uint32_t characteristics, const STRING_MARSHAL_TYPE name[], const STRING_MARSHAL_TYPE manufacturer[], const STRING_MARSHAL_TYPE serialNumber[]);
+uint64_t OpenXRInputProvider_RegisterDeviceDefinition(const STRING_MARSHAL_TYPE userPath[], const STRING_MARSHAL_TYPE interactionProfile[], bool isAdditive, InputDeviceCharacteristics characteristics, const STRING_MARSHAL_TYPE name[], const STRING_MARSHAL_TYPE manufacturer[], const STRING_MARSHAL_TYPE serialNumber[]);
 // __cdecl void OpenXRInputProvider_SendHapticImpulse(uint32_t deviceId, uint64_t actionId, float amplitude, float frequency, float duration);
 // __cdecl void OpenXRInputProvider_SetDpadBindingCustomValues(bool isLeft, float forceThreshold, float forceThresholdReleased, float centerRegion, float wedgeAngle, bool isSticky);
 // __cdecl void OpenXRInputProvider_StopHaptics(uint32_t deviceId, uint64_t actionId);

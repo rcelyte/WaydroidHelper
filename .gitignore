@@ -6,3 +6,4 @@
 /qpm.shared.json
 /qpm_defines.cmake
 /WaydroidHelper.qmod
+/thirdparty/libopenxr_loader.so
