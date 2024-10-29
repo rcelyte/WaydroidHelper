@@ -23,7 +23,7 @@ CFLAGS := -std=c2x -fPIC -fvisibility=hidden -DVERSION=\"$(VERSION)\" -Weverythi
 CXXFLAGS := -std=c++20 -fPIC -fvisibility=hidden -fdeclspec -DVERSION=\"$(VERSION)\" -isystem .obj/include -isystem extern/includes \
 	-isystem extern/includes/bs-cordl/include -isystem extern/includes/libil2cpp/il2cpp/libil2cpp -isystem extern/includes/fmt/fmt/include \
 	-DUNITY_2021 -DHAS_CODEGEN -DFMT_HEADER_ONLY -Weverything -Wno-c++98-compat -Wno-c++98-compat-pedantic -Werror -pedantic-errors
-LDFLAGS = -static-libstdc++ -shared -Wl,--no-undefined,--gc-sections,--fatal-warnings -Lextern/libs -Lextern/libs -Lthirdparty \
+LDFLAGS = -static-libstdc++ -shared -Wl,--no-undefined,--gc-sections,--fatal-warnings -Lextern/libs -Lthirdparty \
 	-l:$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so)) -lpaperlog -lsl2 -llog -l:libUnityOpenXR.so
 
 CXXFILES := $(wildcard src/*.c src/*.cpp src/*/*.cpp) extern/includes/beatsaber-hook/src/inline-hook/And64InlineHook.cpp

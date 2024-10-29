@@ -1,5 +1,4 @@
-#include "OpenXRLoader.hpp"
-#include "OpenXRRestarter.hpp"
+#include "XRPolyfill.hpp"
 #include "UnityOpenXR.hpp"
 #include "../log.hpp"
 #include <scotland2/shared/modloader.h>
@@ -9,11 +8,18 @@
 #include <System/BitConverter.hpp>
 #include <System/Security/Cryptography/MD5.hpp>
 #include <System/Text/Encoding.hpp>
+#include <Unity/XR/Oculus/Input/OculusTouchController.hpp>
 #include <Unity/XR/Oculus/RegisterUpdateCallback.hpp>
-#include <UnityEngine/XR/XR.hpp>
 #include <UnityEngine/Application.hpp>
 #include <UnityEngine/Events/UnityAction.hpp>
+#include <UnityEngine/InputSystem/InputSystem.hpp>
+#include <UnityEngine/InputSystem/Layouts/InputDeviceMatcher.hpp>
+#include <UnityEngine/InputSystem/XR/XRController.hpp>
+#include <UnityEngine/InputSystem/XR/XRControllerWithRumble.hpp>
+#include <UnityEngine/InputSystem/zzzz__InputSystem_impl.hpp>
 #include <UnityEngine/Time.hpp>
+#include <UnityEngine/XR/WindowsMR/Input/WMRHMD.hpp>
+#include <UnityEngine/XR/XR.hpp>
 #include "codegen_broken_types.hpp"
 
 using namespace std::literals::string_view_literals;
@@ -30,6 +36,7 @@ enum class LoaderState {
 } static currentLoaderState = {};
 
 static UnityOpenXR::NativeEvent currentOpenXRState = {};
+static bool actionSetsAttached = false;
 
 static bool isWaydroid() {
 	JNIEnv *env = nullptr;
@@ -52,11 +59,18 @@ static bool StartInternal(Unity::XR::Oculus::OculusLoader *const self) {
 	if(UnityEngine::IntegratedSubsystem *const displaySubsystem = static_cast<UnityEngine::XR::XRDisplaySubsystem*>(self->get_displaySubsystem())) // TODO: remove cast once XRDisplaySubsystem is defined properly in codegen
 		displaySubsystem->Start();
 	UnityOpenXR::session_BeginSession();
-	// TODO: OpenXRInput.AttachActionSets()
-	if(UnityEngine::IntegratedSubsystem *const inputSubsystem = self->get_inputSubsystem())
+	if(!actionSetsAttached) {
+		XRPolyfill::OpenXRInput::AttachActionSets();
+		actionSetsAttached = true;
+	}
+	UnityEngine::IntegratedSubsystem *const displaySubsystem = static_cast<UnityEngine::XR::XRDisplaySubsystem*>(self->get_displaySubsystem());
+	if(displaySubsystem != nullptr && !displaySubsystem->get_running()) // TODO: remove cast once XRDisplaySubsystem is defined properly in codegen
+		displaySubsystem->Start();
+	UnityEngine::IntegratedSubsystem *const inputSubsystem = self->get_inputSubsystem();
+	if(inputSubsystem != nullptr && !inputSubsystem->get_running())
 		inputSubsystem->Start();
 	// OpenXRFeature.ReceiveLoaderEvent(this, OpenXRFeature.LoaderEvent.SubsystemStart);
-	return true;
+	return displaySubsystem != nullptr && inputSubsystem != nullptr && displaySubsystem->get_running() && inputSubsystem->get_running();
 }
 
 static void StopInternal() {
@@ -64,30 +78,66 @@ static void StopInternal() {
 	XRPolyfill::OpenXRLoader::ProcessOpenXRMessageLoop();
 }
 
+static void OpenXRInteractionFeature_RegisterDeviceLayout(const bool withType) {
+	/*UnityEngine::InputSystem::InputSystem::RegisterLayout<Unity::XR::Oculus::Input::OculusTouchController*>(nullptr,
+		{true, UnityEngine::InputSystem::Layouts::InputDeviceMatcher().WithInterface("^(XRInput)", true).WithProduct(
+			"(^(HP Reverb G2 Controller OpenXR))|"
+			"(^(HTC Vive Controller OpenXR))|"
+			"(^(KHR Simple Controller OpenXR))|"
+			"(^(Meta Quest Pro Touch Controller OpenXR))|"
+			"(^(Windows MR Controller OpenXR))|"
+			"(^(Oculus Touch Controller OpenXR))|"
+			"(^(Index Controller OpenXR))", true)});*/
+	const auto registerLayout = [withType](System::Type *const type, const std::string_view json, const std::string_view name, const std::string_view product) {
+		const System::Nullable_1<UnityEngine::InputSystem::Layouts::InputDeviceMatcher> matcher = {true,
+			UnityEngine::InputSystem::Layouts::InputDeviceMatcher().WithInterface("^(XRInput)", true).WithProduct(product, true)};
+		UnityEngine::InputSystem::InputSystem::RegisterLayout(json, name, matcher);
+		if(withType)
+			UnityEngine::InputSystem::InputSystem::RegisterLayout(type, name, matcher);
+	};
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRController*), XRPolyfill::OpenXRInteractionFeature::PalmPose_json, "PalmPose", "Palm Pose Interaction OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRControllerWithRumble*), XRPolyfill::OpenXRInteractionFeature::OculusTouchController_json, "OculusTouchController", "Oculus Touch Controller OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRControllerWithRumble*), XRPolyfill::OpenXRInteractionFeature::WMRSpatialController_json, "WMRSpatialController", "Windows MR Controller OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRController*), XRPolyfill::OpenXRInteractionFeature::HoloLensHand_json, "HoloLensHand", "HoloLens Hand OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRControllerWithRumble*), XRPolyfill::OpenXRInteractionFeature::QuestProTouchController_json, "QuestProTouchController", "Meta Quest Pro Touch Controller OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRControllerWithRumble*), XRPolyfill::OpenXRInteractionFeature::KHRSimpleController_json, "KHRSimpleController", "KHR Simple Controller OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRControllerWithRumble*), XRPolyfill::OpenXRInteractionFeature::ViveController_json, "ViveController", "HTC Vive Controller OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRControllerWithRumble*), XRPolyfill::OpenXRInteractionFeature::ReverbG2Controller_json, "ReverbG2Controller", "HP Reverb G2 Controller OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRController*), XRPolyfill::OpenXRInteractionFeature::HandInteraction_json, "HandInteraction", "Hand Interaction OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRController*), XRPolyfill::OpenXRInteractionFeature::DPad_json, "DPad", "DPad Interaction OpenXR");
+	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRControllerWithRumble*), XRPolyfill::OpenXRInteractionFeature::ValveIndexController_json, "ValveIndexController", "Index Controller OpenXR");
+}
+
 static Unity::XR::Oculus::OculusLoader *OpenXRLoader_Instance = nullptr;
 static void ReceiveNativeEvent(UnityOpenXR::NativeEvent event, uint64_t /*payload*/) {
 	// logger.info("ReceiveNativeEvent(%u, %lx)", event, payload);
 	currentOpenXRState = event;
 	switch(+event) {
-		case UnityOpenXR::NativeEvent_XrRestartRequested: OpenXRRestarter::ShutdownAndRestart(); break;
+		case UnityOpenXR::NativeEvent_XrRestartRequested: XRPolyfill::OpenXRRestarter::ShutdownAndRestart(); break;
 		case UnityOpenXR::NativeEvent_XrReady: StartInternal(OpenXRLoader_Instance); break;
 		case UnityOpenXR::NativeEvent_XrFocused: logger.info("System Startup Completed"); break;
 		case UnityOpenXR::NativeEvent_XrRequestRestartLoop: {
 			logger.debug("XR Initialization failed, will try to restart xr periodically.");
-			OpenXRRestarter::PauseAndShutdownAndRestart();
+			XRPolyfill::OpenXRRestarter::PauseAndShutdownAndRestart();
 		} break;
-		case UnityOpenXR::NativeEvent_XrRequestGetSystemLoop: OpenXRRestarter::PauseAndRetryInitialization(); break;
+		case UnityOpenXR::NativeEvent_XrRequestGetSystemLoop: XRPolyfill::OpenXRRestarter::PauseAndRetryInitialization(); break;
 		case UnityOpenXR::NativeEvent_XrStopping: StopInternal(); break;
 		default:;
 	}
-	// TODO: OpenXRFeature::ReceiveNativeEvent(event, payload);
+	{ // OpenXRFeature::ReceiveNativeEvent()
+		switch(+event) {
+			case UnityOpenXR::NativeEvent_XrInstanceChanged: OpenXRInteractionFeature_RegisterDeviceLayout(true); break;
+			case UnityOpenXR::NativeEvent_XrSessionStateChanged: XRPolyfill::UpdateUserPresence(); break;
+			default:;
+		}
+	}
 	if(currentLoaderState != LoaderState::Initialized && currentLoaderState != LoaderState::StartAttempted &&
 			currentLoaderState != LoaderState::Started && event != UnityOpenXR::NativeEvent_XrInstanceChanged)
 		return;
 	switch(+event) {
-		case UnityOpenXR::NativeEvent_XrExiting: OpenXRRestarter::Shutdown(); break;
-		case UnityOpenXR::NativeEvent_XrLossPending: OpenXRRestarter::ShutdownAndRestart(); break;
-		case UnityOpenXR::NativeEvent_XrInstanceLossPending: OpenXRRestarter::Shutdown(); break;
+		case UnityOpenXR::NativeEvent_XrExiting: XRPolyfill::OpenXRRestarter::Shutdown(); break;
+		case UnityOpenXR::NativeEvent_XrLossPending: XRPolyfill::OpenXRRestarter::ShutdownAndRestart(); break;
+		case UnityOpenXR::NativeEvent_XrInstanceLossPending: XRPolyfill::OpenXRRestarter::Shutdown(); break;
 		default:;
 	}
 }
@@ -106,8 +156,15 @@ void XRPolyfill::OpenXRLoader::ProcessOpenXRMessageLoop() {
 
 static bool InitializeInternal(Unity::XR::Oculus::OculusLoader *const self) {
 	currentLoaderState = LoaderState::InitializeAttempted;
-	// TODO: OpenXRInput.RegisterLayouts()
 	UnityOpenXR::session_SetSuccessfullyInitialized(false);
+	{ // OpenXRInput.RegisterLayouts()
+		UnityEngine::InputSystem::InputSystem::RegisterLayout(XRPolyfill::OpenXRInteractionFeature::Haptic_json, "Haptic", {false, {}});
+		UnityEngine::InputSystem::InputSystem::RegisterLayout(XRPolyfill::OpenXRInteractionFeature::OpenXRDevice_json, "OpenXRDevice", {false, {}});
+		UnityEngine::InputSystem::InputSystem::RegisterLayout<UnityEngine::XR::WindowsMR::Input::WMRHMD*>(nullptr,
+			{true, UnityEngine::InputSystem::Layouts::InputDeviceMatcher().WithInterface("^(XRInput)", true)
+				.WithProduct("Head Tracking - OpenXR", true).WithManufacturer("OpenXR", true)});
+		OpenXRInteractionFeature_RegisterDeviceLayout(false);
+	}
 	{ // LoadOpenXRSymbols()
 		if(!UnityOpenXR::main_LoadOpenXRLibrary(L"openxr_loader")) {
 			logger.error("OpenXRLoader - Failed to load openxr runtime loader.");
@@ -220,7 +277,7 @@ bool XRPolyfill::OpenXRLoader::Deinitialize(Unity::XR::Oculus::OculusLoader *con
 	ProcessOpenXRMessageLoop();
 	UnityOpenXR::main_UnloadOpenXRLibrary();
 	currentLoaderState = LoaderState::Uninitialized;
-	// actionSetsAttached = false;
+	actionSetsAttached = false;
 	// TODO: return base.Deinitialize();
 	return true;
 }
