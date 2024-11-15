@@ -5,7 +5,7 @@ MAKEFLAGS += --no-print-directory -j
 .SECONDARY:
 
 sinclude makefile.user
-VERSION := 1.0.0-sl2test
+VERSION := 1.1.0
 
 CC := $(NDK)/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=aarch64-linux-android26
 CXX := $(NDK)/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++ --target=aarch64-linux-android26
@@ -79,8 +79,8 @@ $(OBJDIR)/%.cpp.o: %.cpp extern makefile | ndk
 thirdparty/libopenxr_loader.so:
 	@echo "[curl $(notdir $@)]"
 	@mkdir -p .obj/
-	curl https://github.com/KhronosGroup/OpenXR-SDK-Source/releases/download/release-1.0.29/openxr_loader_for_android-1.0.29.aar -Lo .obj/openxr_loader.aar
-	echo "b50bb0d22c6d5fd2f8a7cef4a1d7bb9632c26b1b45c7e82c6aa01f1fc89be6b5 .obj/openxr_loader.aar" | \
+	curl https://github.com/KhronosGroup/OpenXR-SDK-Source/releases/download/release-1.1.42/openxr_loader_for_android-1.1.42.aar -Lo .obj/openxr_loader.aar
+	echo "4e80dcce0f08bbbf153df94d88032ed728a6cf16750733aebe7e6bb5c5814472 .obj/openxr_loader.aar" | \
 		sha256sum -c || (rm .obj/openxr_loader.aar; false)
 	unzip -ojd $(@D) .obj/openxr_loader.aar prefab/modules/openxr_loader/libs/android.arm64-v8a/libopenxr_loader.so
 	rm .obj/openxr_loader.aar

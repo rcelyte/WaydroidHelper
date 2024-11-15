@@ -89,11 +89,16 @@ static void OpenXRInteractionFeature_RegisterDeviceLayout(const bool withType) {
 			"(^(Oculus Touch Controller OpenXR))|"
 			"(^(Index Controller OpenXR))", true)});*/
 	const auto registerLayout = [withType](System::Type *const type, const std::string_view json, const std::string_view name, const std::string_view product) {
-		const System::Nullable_1<UnityEngine::InputSystem::Layouts::InputDeviceMatcher> matcher = {true,
+		/*const System::Nullable_1<UnityEngine::InputSystem::Layouts::InputDeviceMatcher> matcher = {true,
 			UnityEngine::InputSystem::Layouts::InputDeviceMatcher().WithInterface("^(XRInput)", true).WithProduct(product, true)};
 		UnityEngine::InputSystem::InputSystem::RegisterLayout(json, name, matcher);
 		if(withType)
-			UnityEngine::InputSystem::InputSystem::RegisterLayout(type, name, matcher);
+			UnityEngine::InputSystem::InputSystem::RegisterLayout(type, name, matcher);*/
+		UnityEngine::InputSystem::InputSystem::getStaticF_s_Manager()->RegisterControlLayout(json, name, false);
+		if(withType)
+			UnityEngine::InputSystem::InputSystem::getStaticF_s_Manager()->RegisterControlLayout(name, type);
+		UnityEngine::InputSystem::InputSystem::getStaticF_s_Manager()->RegisterControlLayoutMatcher(name,
+			UnityEngine::InputSystem::Layouts::InputDeviceMatcher().WithInterface("^(XRInput)", true).WithProduct(product, true));
 	};
 	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRController*), XRPolyfill::OpenXRInteractionFeature::PalmPose_json, "PalmPose", "Palm Pose Interaction OpenXR");
 	registerLayout(csTypeOf(UnityEngine::InputSystem::XR::XRControllerWithRumble*), XRPolyfill::OpenXRInteractionFeature::OculusTouchController_json, "OculusTouchController", "Oculus Touch Controller OpenXR");

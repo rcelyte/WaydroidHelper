@@ -159,7 +159,7 @@ extern "C" [[gnu::visibility("default")]] void setup(CModInfo *const modInfo) {
 	*modInfo = {
 		.id = "WaydroidHelper",
 		.version = VERSION,
-		.version_long = 2,
+		.version_long = 3,
 	};
 }
 

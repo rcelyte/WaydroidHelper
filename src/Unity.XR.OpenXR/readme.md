@@ -15,7 +15,8 @@ Unity.XR.OpenXR.dll: $(shell find Runtime/ -name "*.cs")
 		-r:$(BSINSTALL)/Beat\ Saber_Data/Managed/Unity.InputSystem.dll \
 		-r:$(BSINSTALL)/Beat\ Saber_Data/Managed/Unity.XR.Management.dll
 ```
-`OpenXRSettings.Instance.features` needs to be manually initialized in `OpenXRLoaderBase.Initialize()` due to the `[SerializeField]` not matching properly:```cs
+`OpenXRSettings.Instance.features` needs to be manually initialized in `OpenXRLoaderBase.Initialize()` due to the `[SerializeField]` not matching properly:
+```cs
 OpenXRSettings.Instance.features = new UnityEngine.XR.OpenXR.Features.OpenXRFeature[] {
 	new BeatSaberXRFeature {enabled=true, nameUi="Beat Saber XR Feature", version="1.0.0", featureIdInternal="com.beatgames.beatsaber.feature.beatsaberxr", openxrExtensionStrings="", company="Beat Saber", priority=0, required=false},
 	// new UnityEngine.XR.OpenXR.Features.ConformanceAutomation.ConformanceAutomationFeature {enabled=false, nameUi="Conformance Automation", version="0.0.1", featureIdInternal="com.unity.openxr.feature.conformance", openxrExtensionStrings="XR_EXT_conformance_automation", company="Unity", priority=0, required=false},
