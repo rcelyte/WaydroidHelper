@@ -1,4 +1,5 @@
 #pragma once
+#include <span>
 #include <Unity/XR/Oculus/OculusLoader.hpp>
 #include <GlobalNamespace/UnityXRController.hpp>
 

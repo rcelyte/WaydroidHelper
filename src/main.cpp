@@ -1,3 +1,4 @@
+#include <span>
 #include <scotland2/shared/modloader.h>
 #include <beatsaber-hook/shared/utils/hooking.hpp>
 #include "Unity.XR.OpenXR/XRPolyfill.hpp"
@@ -36,10 +37,10 @@ MAKE_HOOK_NO_CATCH(Data_GetValue, nullptr, const char*, const void *self, const 
 		return (std::string_view(key) == "xrsdk-pre-init-library") ? libUnityOpenXR.c_str() : result;
 	}
 }
-static void *(*dynamic_array_emplace_back)(void *self, const char *const &str) = nullptr;
+static void *(*core_vector_emplace_back)(void *self, const char *const &str) = nullptr;
 MAKE_HOOK_NO_CATCH(GetSubsystemPluginSearchPaths, nullptr, void, uintptr_t *const paths_out, const void *const packageInfo) {
 	GetSubsystemPluginSearchPaths(paths_out, packageInfo);
-	dynamic_array_emplace_back(paths_out,
+	core_vector_emplace_back(paths_out,
 		(std::filesystem::path{modloader::get_modloader_root_load_path()}.replace_filename("Mods") / "WaydroidHelper").c_str());
 }
 MAKE_HOOK_MATCH(OculusLoader_RuntimeLoadOVRPlugin, &Unity::XR::Oculus::OculusLoader::RuntimeLoadOVRPlugin, void) {}
@@ -161,7 +162,7 @@ extern "C" [[gnu::visibility("default")]] void setup(CModInfo *const modInfo) {
 	*modInfo = {
 		.id = "WaydroidHelper",
 		.version = VERSION,
-		.version_long = 3,
+		.version_long = 4,
 	};
 }
 
@@ -185,15 +186,15 @@ extern "C" [[gnu::visibility("default")]] void load() {
 	}
 
 	const std::filesystem::path libunity_so = std::filesystem::path{modloader::get_libil2cpp_path()}.replace_filename("libunity.so");
-	dynamic_array_emplace_back = reinterpret_cast<decltype(dynamic_array_emplace_back)>(ElfLoadedSymbol(libunity_so.c_str(),
-		"_ZN13dynamic_arrayIN4core12basic_stringIcNS0_20StringStorageDefaultIcEEEELm0EE12emplace_backIJRKPKcEEERS4_DpOT_"));
-	assert(dynamic_array_emplace_back != nullptr);
+	core_vector_emplace_back = reinterpret_cast<decltype(core_vector_emplace_back)>(ElfLoadedSymbol(libunity_so.c_str(),
+		"_ZN4core6vectorINS_12basic_stringIcNS_20StringStorageDefaultIcEEEELm0EE12emplace_backIJRKPKcEEERS4_DpOT_"));
+	assert(core_vector_emplace_back != nullptr);
 
 	logger.info("installing native hooks");
 	Hooking::InstallHookDirect<Hook_OVRPlugin_UnityPluginLoad>(logger, dlsym(dlopen("libOVRPlugin.so", RTLD_NOW), "UnityPluginLoad"));
 	Hooking::InstallHookDirect<Hook_Data_GetValue>(logger, ElfLoadedSymbol(libunity_so.c_str(), "_ZNK10BootConfig4Data8GetValueEPKcm"));
 	Hooking::InstallHookDirect<Hook_GetSubsystemPluginSearchPaths>(logger, ElfLoadedSymbol(libunity_so.c_str(),
-		"_Z29GetSubsystemPluginSearchPathsR13dynamic_arrayIN4core12basic_stringIcNS0_20StringStorageDefaultIcEEEELm0EEPK28SubsystemUpmPackageInfoArray"));
+		"_Z29GetSubsystemPluginSearchPathsRN4core6vectorINS_12basic_stringIcNS_20StringStorageDefaultIcEEEELm0EEEPK28SubsystemUpmPackageInfoArray"));
 
 	logger.info("installing managed hooks");
 	Hooking::InstallHook<Hook_OculusLoader_RuntimeLoadOVRPlugin>(logger);
