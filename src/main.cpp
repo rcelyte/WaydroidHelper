@@ -9,11 +9,12 @@
 #include <GlobalNamespace/BasePlatformInit.hpp>
 #include <GlobalNamespace/UnityXRController.hpp>
 #include <GlobalNamespace/VRController.hpp>
-#include <UnityEngine/InputSystem/XR/XRController.hpp>
+#include <Oculus/Platform/CAPI.hpp>
 #include <Unity/XR/Oculus/Oculus.hpp>
 #include <UnityEngine/InputSystem/InputAction.hpp>
-#include <UnityEngine/XR/InputDevices.hpp>
+#include <UnityEngine/InputSystem/XR/XRController.hpp>
 #include <UnityEngine/XR/InputDevice.hpp>
+#include <UnityEngine/XR/InputDevices.hpp>
 #include <UnityEngine/XR/WindowsMR/Input/WMRHMD.hpp>
 
 #pragma GCC diagnostic ignored "-Wexit-time-destructors"
@@ -42,6 +43,7 @@ MAKE_HOOK_NO_CATCH(GetSubsystemPluginSearchPaths, nullptr, void, uintptr_t *cons
 		(std::filesystem::path{modloader::get_modloader_root_load_path()}.replace_filename("Mods") / "WaydroidHelper").c_str());
 }
 MAKE_HOOK_MATCH(OculusLoader_RuntimeLoadOVRPlugin, &Unity::XR::Oculus::OculusLoader::RuntimeLoadOVRPlugin, void) {}
+MAKE_HOOK_MATCH(Platform_ovr_Log_NewEvent, &Oculus::Platform::CAPI::ovr_Log_NewEvent, void, System::IntPtr, ArrayW<System::IntPtr, Array<System::IntPtr>*>, System::UIntPtr) {}
 MAKE_HOOK_MATCH(BasePlatformInit_Initialize, &GlobalNamespace::BasePlatformInit::Initialize, void, GlobalNamespace::BasePlatformInit *const self) {
 	self->set_IsInitialized(true);
 	BasePlatformInit_Initialize(self);
@@ -195,6 +197,7 @@ extern "C" [[gnu::visibility("default")]] void load() {
 
 	logger.info("installing managed hooks");
 	Hooking::InstallHook<Hook_OculusLoader_RuntimeLoadOVRPlugin>(logger);
+	Hooking::InstallHook<Hook_Platform_ovr_Log_NewEvent>(logger);
 	Hooking::InstallHook<Hook_BasePlatformInit_Initialize>(logger);
 
 	Hooking::InstallHook<Hook_OculusLoader_Initialize>(logger);

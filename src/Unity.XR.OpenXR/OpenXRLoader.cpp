@@ -277,7 +277,7 @@ bool XRPolyfill::OpenXRLoader::Deinitialize(Unity::XR::Oculus::OculusLoader *con
 	ProcessOpenXRMessageLoop();
 	// OpenXRFeature.ReceiveLoaderEvent(this, OpenXRFeature.LoaderEvent.SubsystemDestroy);
 	self->DestroySubsystem<UnityEngine::XR::XRInputSubsystem*>();
-	self->DestroySubsystem<UnityEngine::XR::XRDisplaySubsystem*>();
+	// self->DestroySubsystem<UnityEngine::XR::XRDisplaySubsystem*>(); // TODO: crashes
 	UnityOpenXR::session_DestroySession();
 	ProcessOpenXRMessageLoop();
 	UnityOpenXR::main_UnloadOpenXRLibrary();

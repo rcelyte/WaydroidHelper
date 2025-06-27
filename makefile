@@ -61,7 +61,7 @@ $(OBJDIR)/%.cpp.o: %.cpp extern makefile | ndk
 		\"author\": \"rcelyte\",\n\
 		\"version\": \"$(VERSION)\",\n\
 		\"packageId\": \"com.beatgames.beatsaber\",\n\
-		\"packageVersion\": \"1.35.0_8016709773\",\n\
+		\"packageVersion\": \"1.37.0_9064817954\",\n\
 		\"description\": \"Questless any%%\",\n\
 		\"coverImage\": \"cover.png\",\n\
 		\"dependencies\": [\n\

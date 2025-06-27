@@ -15,7 +15,7 @@
 			"additionalData": {"extraFiles": ["src/inline-hook/And64InlineHook.cpp"]}
 		}, {
 			"id": "bs-cordl",
-			"versionRange": "^3500.*",
+			"versionRange": "^3700.*",
 			"additionalData": {}
 		}, {
 			"id": "paper",
