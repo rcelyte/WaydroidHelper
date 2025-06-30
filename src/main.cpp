@@ -1,9 +1,9 @@
 #include <span>
 #include <scotland2/shared/modloader.h>
 #include <beatsaber-hook/shared/utils/hooking.hpp>
-#include "Unity.XR.OpenXR/XRPolyfill.hpp"
 #include "elf_helper.h"
 #include "log.hpp"
+#include "Unity.XR.OpenXR/XRPolyfill.hpp"
 #include <dlfcn.h>
 #include <sys/stat.h>
 
@@ -20,28 +20,38 @@
 
 #pragma GCC diagnostic ignored "-Wexit-time-destructors"
 
-constexpr static bool USE_SYMLINK = true;
-
-static struct IUnityInterfaces *unityInterfaces = nullptr;
+static bool pluginInitialized = false;
 MAKE_HOOK_NO_CATCH(OVRPlugin_UnityPluginLoad, nullptr, void, struct IUnityInterfaces *const interfaces) {
-	unityInterfaces = interfaces;
+	void UnityOpenXR_UnityPluginLoad(struct IUnityInterfaces*) __asm__("UnityPluginLoad");
+
 	OVRPlugin_UnityPluginLoad(interfaces);
+	UnityOpenXR_UnityPluginLoad(interfaces);
+	pluginInitialized = true;
 }
 
+static const char *libUnityOpenXR;
 MAKE_HOOK_NO_CATCH(Data_GetValue, nullptr, const char*, const void *self, const char key[], unsigned long _unused) {
 	const char *const result = Data_GetValue(self, key, _unused);
-	if constexpr(USE_SYMLINK) {
-		return (std::string_view(key) == "xrsdk-pre-init-library") ? "UnityOpenXR" : result;
-	} else {
-		static const std::filesystem::path libUnityOpenXR = modloader::get_files_dir() / "libs" / "libUnityOpenXR.so";
-		return (std::string_view(key) == "xrsdk-pre-init-library") ? libUnityOpenXR.c_str() : result;
-	}
+	return (std::string_view(key) == "xrsdk-pre-init-library") ? libUnityOpenXR : result;
 }
 static void *(*core_vector_emplace_back)(void *self, const char *const &str) = nullptr;
 MAKE_HOOK_NO_CATCH(GetSubsystemPluginSearchPaths, nullptr, void, uintptr_t *const paths_out, const void *const packageInfo) {
+	static const std::filesystem::path modData = std::filesystem::path{modloader::get_modloader_root_load_path()}.replace_filename("Mods") / "WaydroidHelper";
+	[[maybe_unused]] static bool _once = [] {
+		std::filesystem::create_directories(modData / "UnityOpenXR");
+		std::ofstream manifest = std::ofstream(modData / "UnityOpenXR" / "UnitySubsystemsManifest.json", std::ios::binary | std::ios::trunc);
+		manifest <<
+			"{\n"
+			"	\"name\": \"OpenXR XR Plugin\",\n"
+			"	\"version\": \"1.9.1\",\n"
+			"	\"libraryName\": \"" << libUnityOpenXR << "\",\n"
+			"	\"displays\": [{\"id\": \"OpenXR Display\"}],\n"
+			"	\"inputs\": [{\"id\": \"OpenXR Input\"}]\n"
+			"}\n";
+		return true;
+	}();
 	GetSubsystemPluginSearchPaths(paths_out, packageInfo);
-	core_vector_emplace_back(paths_out,
-		(std::filesystem::path{modloader::get_modloader_root_load_path()}.replace_filename("Mods") / "WaydroidHelper").c_str());
+	core_vector_emplace_back(paths_out, modData.c_str());
 }
 MAKE_HOOK_MATCH(OculusLoader_RuntimeLoadOVRPlugin, &Unity::XR::Oculus::OculusLoader::RuntimeLoadOVRPlugin, void) {}
 MAKE_HOOK_MATCH(Platform_ovr_Log_NewEvent, &Oculus::Platform::CAPI::ovr_Log_NewEvent, void, System::IntPtr, ArrayW<System::IntPtr, Array<System::IntPtr>*>, System::UIntPtr) {}
@@ -51,11 +61,7 @@ MAKE_HOOK_MATCH(BasePlatformInit_Initialize, &GlobalNamespace::BasePlatformInit:
 }
 
 MAKE_HOOK_MATCH(OculusLoader_Initialize, &Unity::XR::Oculus::OculusLoader::Initialize, bool, Unity::XR::Oculus::OculusLoader *const self) {
-	[[maybe_unused]] static bool _once = [] {
-		void UnityOpenXR_UnityPluginLoad(struct IUnityInterfaces*) __asm__("UnityPluginLoad");
-		UnityOpenXR_UnityPluginLoad(unityInterfaces);
-		return true;
-	}();
+	assert(pluginInitialized);
 	logger.info("XRPolyfill::OpenXRLoader::Initialize()");
 	return XRPolyfill::OpenXRLoader::Initialize(self);
 }
@@ -173,14 +179,13 @@ extern "C" [[gnu::visibility("default")]] void load() {
 	// TEMP TEST
 	// il2cpp_utils::exceptions::StackTraceException(fmt::format("Throwing in {} at {}:{}", "undefined_function", "undefined_file", 23));
 
-	// Unity implodes if libUnityOpenXR is loaded from a path outside the libs folder
-	if constexpr(USE_SYMLINK) {
-		const auto soPath = std::filesystem::path{modloader::get_libil2cpp_path()}.replace_filename("libUnityOpenXR.so");
-		struct stat libUnityOpenXR_stat = {};
-		if(stat(soPath.c_str(), &libUnityOpenXR_stat) == 0 && (libUnityOpenXR_stat.st_mode & S_IFMT) == S_IFREG) {
-			logger.debug("libUnityOpenXR.so already exists; skipping symlink");
-		} else if(symlink((modloader::get_files_dir() / "libs" / "libUnityOpenXR.so").c_str(), soPath.c_str()) != 0) {
-			logger.error("symlink(libUnityOpenXR.so) failed: %s", strerror(errno));
+	static const std::filesystem::path libUnityOpenXR_path = modloader::get_files_dir() / "libs" / "libUnityOpenXR.so";
+	libUnityOpenXR = libUnityOpenXR_path.c_str();
+	if(symlink(libUnityOpenXR, std::filesystem::path{libUnityOpenXR_path}.replace_extension().c_str()) != 0) {
+		if(errno == EEXIST) {
+			logger.warn("libUnityOpenXR already exists; skipping symlink");
+		} else {
+			logger.error("symlink(libUnityOpenXR) failed: %s", strerror(errno));
 			return;
 		}
 	}

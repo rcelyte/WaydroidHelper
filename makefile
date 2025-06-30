@@ -31,7 +31,7 @@ CXXFILES := $(wildcard src/*.c src/*.cpp src/*/*.cpp) extern/includes/beatsaber-
 
 all: WaydroidHelper.qmod
 
-WaydroidHelper.qmod: cover.png thirdparty/libUnityOpenXR.so thirdparty/libopenxr_loader.so thirdparty/UnitySubsystemsManifest.json libWaydroidHelper.so .obj/WaydroidHelper.qmod/mod.json
+WaydroidHelper.qmod: cover.png thirdparty/libUnityOpenXR.so thirdparty/libopenxr_loader.so libWaydroidHelper.so .obj/WaydroidHelper.qmod/mod.json
 	@echo "[zip $@]"
 	zip -j "$@" $^ extern/libs/libbeatsaber-hook*.so
 
@@ -73,8 +73,7 @@ $(OBJDIR)/%.cpp.o: %.cpp extern makefile | ndk
 			}\n\
 		],\n\
 		\"modFiles\": [\"libWaydroidHelper.so\"],\n\
-		\"libraryFiles\": [\"$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so))\", \"libopenxr_loader.so\", \"libUnityOpenXR.so\"],\n\
-		\"fileCopies\": [{\"name\": \"UnitySubsystemsManifest.json\", \"destination\": \"/sdcard/ModData/com.beatgames.beatsaber/Mods/WaydroidHelper/UnityOpenXR/UnitySubsystemsManifest.json\"}]\n\
+		\"libraryFiles\": [\"$(notdir $(wildcard extern/libs/libbeatsaber-hook*.so))\", \"libopenxr_loader.so\", \"libUnityOpenXR.so\"]\n\
 	}" > $@
 
 thirdparty/libopenxr_loader.so:
